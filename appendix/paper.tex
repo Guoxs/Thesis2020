@@ -1,0 +1,40 @@
+% !Mode:: "TeX:UTF-8"
+
+% 打印时插入必要的空白页
+\ifprint
+	\newpage
+	\thispagestyle{empty}
+	\mbox{}
+	
+	% 避免空白页影响页码编号
+	\clearpage
+	\setcounter{page}{10}
+\fi
+
+\markboth{攻读硕士学位期间发表学术论文情况}{攻读硕士学位期间发表学术论文情况}
+\addcontentsline{toc}{chapter}{攻读硕士学位期间发表学术论文情况}
+% 如果需要从该页开始从 1 开始编页，则取消以下注释
+%\setcounter{page}{1}
+\chapter*{攻读硕士学位期间发表学术论文情况}
+
+\begin{enumerate}
+	% 盲审时
+	\item The paper title [J/C...]. Publish whereabout, 2014, 21(3): 288-291. （第一作者，导师为第一作者）（与学位论文第n章相关）(盲审时，不要出现名字)
+	% 提交时
+	\item Authors. The paper title [J/C...]. Publish whereabout, 2014, 21(3): 288-291. (提交时)
+\end{enumerate}
+
+% 不显示页码，则取消以下注释
+%\thispagestyle{empty}
+
+
+% 打印时插入必要的空白页
+\ifprint
+	\newpage
+	\thispagestyle{empty}
+	\mbox{}
+	
+	% 避免空白页影响页码编号
+	\clearpage
+	\setcounter{page}{10}
+\fi

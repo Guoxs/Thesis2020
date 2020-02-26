@@ -1,0 +1,15 @@
+# ignore Latex build files and results
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.gz
+*.thm
+*.toc
+*.nav
+*.run.xml
+*.snm
+
+# ignore Slide generated files
+presentation/*.bib
