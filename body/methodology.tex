@@ -97,8 +97,9 @@ C^{t,t+\tau}(j,k,p,q) = \left \langle f^t_i(j,k), f^{t+\tau}_i(j+p,k+q) \right \
 
 \section{运动插值模块}
 \label{interpolation}
+运动插值模块的任务主要是将两目标检测模块的输出与时序信息处理模块的输出整合，在时序信息的引导下，将关键帧的物体检测结果传播到非关键帧。运动插值模块主要由一个基于运动模型的插值算法（Motion based Interpolation Algorithm，MoI）组成，其流程如算法 \ref{alg:interpolation} 所示。MoI算法的输入为第$t$帧以及$t+\tau$帧的三维物体检测结果$D^t$和$D^{t+\tau}$，以及这两帧中各物体的相对偏移$\Delta^{t,t+\tau}$。输出为$t$到$t+\tau$帧的所有目标检测结果。当$t$帧与$t+\tau$帧检测的目标个数相同时，$D^t，D^{t+\tau}$以及$\Delta^{t,t+\tau}$元素个数相同；当有目标不同时存在于$t$帧与$t+\tau$帧时，$D^t$与$D^{t+\tau}$的元素不相等，而$\Delta^{t,t+\tau}$元素个数为$D^t$与$D^{t+\tau}$的最大值，只是不同时存在前后两帧赶关键帧的目标偏移量为0。
 
-\begin{algorithm}
+\begin{algorithm}[!h]
 	\caption{基于运动模型的插值算法(MoI Algorithm)}
 	\label{alg:interpolation}
 	\textbf{输入: } $D^t= [d^t_0, d^t_1, ..., d^t_{N_t}], D^{t+\tau}= [d^{t+\tau}_0, d^{t+\tau}_1, ..., d^{t+\tau}_{N_{t+\tau}}],$
@@ -108,29 +109,40 @@ C^{t,t+\tau}(j,k,p,q) = \left \langle f^t_i(j,k), f^{t+\tau}_i(j+p,k+q) \right \
 	\For{$d^t_i \emph{ in } D^t$}{
 		$\Delta d^{t, t+ \tau}_{i} = (d^t_{i, w} \cdot \delta^{t, t+\tau}_{i,x}, 0, d^t_{i, l} \cdot \delta^{t, t+\tau}_{i,z}, 0, 0, d^t_{i, ry} \cdot \delta^{t, t+\tau}_{i,ry})$
 		$d' = getMatched(d^t_i+\Delta d^{t, t+ \tau}_{i}, D_{temp})$\\
-		\If{$d'$}{
+		\If{$d'$ 存在}{
 			$d^{t+1}_i,..., d^{t+\tau-1}_i = Interpolate(d^t_i, d')$\\
-			remove $d'$ from $D_{temp}$
+			将 $d'$ 从 $D_{temp}$ 中移除
 		}
 		\ElseIf{$p_{co}^i \geq p_{co}^{max}$}{
 			$d^{t+1}_i,..., d^{t+\tau}_i = Interpolate(d^t_i, d^t_i + \Delta d^{t, t+ \tau}_{i})$
 		}
-		\Else{generate $(d^{t+1}_i,..., d^{t+\tau-1}_i)$ by motion model}
+		\Else{使用运动模型生成 $(d^{t+1}_i,..., d^{t+\tau-1}_i)$}
 	}
-	\If{$D_{temp}$ is not empty}{
+	\If{$D_{temp}$ 非空}{
 		\For{$d^{t+\tau}_j \emph{ in } D_{temp}$}{
 			\If{$p_{co}^j \geq p_{co}^{max}$}{
 				$d^{t}_j,..., d^{t+\tau-1}_j = Interpolate(d^{t+\tau}_j - \Delta d^{t, t+ \tau}_{j}, d^{t+\tau}_j)$
 			}
 			\Else{
-				generate $(d^{t+1}_j,..., d^{t+\tau-1}_j)$ by motion model
+				使用运动模型生成 $(d^{t+1}_j,..., d^{t+\tau-1}_j)$
 			}
 		}
 	}
 \end{algorithm}
 
+MoI算法的主要思想是对于两帧中都存在的目标，使用线性插值算法生成中间帧的结果；对于只存在某一帧的目标，则使用基于时序信息的运动模型生成中间帧结果。具体流程如下：（1）对于$D^t$中的每一个预测框$d^t_i$，首先让其加上对应的偏移量$\Delta d_i^{t,t+\tau}$（该偏移量由 $\delta_i^{t,t+\tau}$ 解码得到），得到预测的运动后的物体框$d^t_i + \Delta d_i^{t,t+\tau}$。然后使用 \textit{getMatched} 匹配函数去$D_{temp}$中找到匹配度最高的候选框$d'$。\textit{getMatched}函数简单的计算$d^t_i + \Delta d_i^{t,t+\tau}$ 与$D_{temp}$中所有框的3D IOU值，然后在高于某一阈值（具体实现时为0.5）的IOU中筛选出最大者，然后返回其对应的预测框$d'$。（2）如果匹配成功，即$d'$存在，即证明该目标在两帧中同时存在，然后算法使用线性插值生成$t+1$到$t+\tau-1$帧预测框结果，同时将$d'$从$D_{temp}$中移除，防止后续再次被匹配。（3）对于匹配失败的情况，有两种可能的原因，发生漏检以及轨迹终止。这两种情况的判断可以通过时序信息处理模块的输出$p_{co}$，如果$p_{co}^i \geq p_{co}^{max}$，则表明该目标很大概率在$t+\tau$中存在，只是由于检测模型漏检了。这种情况下可通过偏移量信息计算出下一帧对应的物体框为$d^t_i + \Delta d^{t, t+ \tau}_{i}$，之后通过线性插值算法就能够生成中间帧的结果。如果$p_{co}^i < p_{co}^{max}$， 则表明轨迹已经终止，这种情况算法会根据目标的历史运动信息进行适当的轨迹扩展，下一段将重点介绍该过程。（4）循环完$D^t$中元素后，有可能$D_{temp}$中还存在预测框没有被匹配。这时也同样会出现两种情况，一种是前一帧中发生了漏检，另外就是该目标刚刚出现，这可以通过$p_{co}$的值加以区分。对于漏检的情况，算法会根据偏移信息生成前一帧的预测框，然后再通过线性插值算法生成中间帧的结果；对于目标刚出现的情况，同样的算法使用运动模型进行轨迹扩展。
 
+运动模型的使用是基于假设“物体的速度在短时间内是不变的，与相机自身的运动无关”开展的。在物体运动时，模型会根据物体的历史状态以及运动增量来计算物体在下一时刻的状态。具体而言，模型记录着每条轨迹片段在BEV视角的全局速度$v = (v_x, v_z, v_{\theta})$，当下一帧有某个物体匹配到该轨迹时，该全局速度会被更新，更新方法如公式\ref{con:global_velocity}所示。其中$\alpha$衡量了轨迹下一时刻物体速度对轨迹全局速度的影响，在实际运行$\alpha = 0.8$。对于轨迹的终止，由于DODT只对关键帧进行检测，因此我们无法判断轨迹具体在$t$帧到$t+\tau$帧中的哪一帧终止。因此，对于在$t$帧存在而$t+\tau$中不存在的物体，我们统一将轨迹向后延伸3帧，延伸过程使用该轨迹的全局速度进行插值。如果在延伸过程中轨迹超出点云数据范围，则延伸会提前终止。同样，对于轨迹的起始，轨迹也会根据后续帧的信息进行前向延伸。这样做的好处是确保算法不会出现漏检的情况，因为在实际应用中，漏检往往要付出更高的代价。
+\begin{equation}
+\begin{aligned}
+	& v_x = \alpha v_x + (1-\alpha)\frac{x^{t+\tau} - x^{t}}{\tau} = \alpha v_x + (1-\alpha)\frac{w^t \delta_x^{t,t+\tau}}{\tau}\\
+	& v_z = \alpha v_z + (1-\alpha)\frac{z^{t+\tau} - z^{t}}{\tau} = \alpha v_z + (1-\alpha)\frac{l^t \delta_z^{t,t+\tau}}{\tau}\\
+	& v_{\theta} = \alpha v_{\theta} + (1-\alpha)\frac{\theta^{t+\tau} - \theta^{t}}{\tau} = \alpha v_{\theta} + (1-\alpha)\frac{\theta^t \delta_{\theta}^{t,t+\tau}}{\tau}
+\end{aligned}
+\label{con:global_velocity}
+\end{equation}
 
+在具体实验过程中，我们发现物体运动方向的预测有时候在相邻关键帧会发生180度的转变，这使得在物体朝向插值过程中出现很大的偏差。为了解决该问题，我们使用了一个简单的朝向校准算法来维持轨迹朝向的连续性。对于一条轨迹$T^i_{match}$和下一帧中与该轨迹匹配的预测框$D^i_{match}$，如果这两者的朝向之差大于$\frac{\pi}{2}$（$T^i_{match}$的朝向由该物体最后时刻的朝向决定），则将$D^i_{match}$的朝向角度加上$\pi$，即将$D^i_{match}$旋转180度，使其能够与轨迹的朝向基本保持一致，这样就不会出现物体朝向在相邻帧中突然变化很大的情况。
 \section{多目标追踪}
 \label{tracking_module}
 
