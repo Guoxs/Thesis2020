@@ -2,10 +2,42 @@
 
 \chapter{实验过程与结果分析}
 \label{experiment}
-
+本章将介绍本项目的实验部分，包括对KITTI数据集、数据预处理、模型训练以及实验结果分析等内容。在结果分析中，我们首先比较DODT各模块对结果的影响，以考察每个模块的有效性；然后我们探讨了关键帧的选取步长对三维物体检测结果的影响，以便确定最优的步长；最后我们也测试了DODT在多目标追踪任务上的性能，并与前沿方法对比。结果显示DODT框架能很好的完成流数据的三维物体检测以及多目标跟踪任务。
 
 \section{KITTI数据集介绍}
 \label{kitti}
+本项目的所有实验都是基于无人驾驶领域中广泛使用的KITTI公开数据集开展的。KITTI数据集是由德国卡尔斯鲁厄理工学院和丰田美国技术研究院联合采集的，该数据集包含多种传感器数据：一个惯性导航系统（GPS/IMU，型号为OXTS RT 3003）数据，一个激光雷达（Velodyne HDL-64E）数据，两个灰度相机数据（140万像素）以及两个彩色相机数据（140万像素）。其中激光雷达扫描频率为10帧/秒，相机基本与地平面保持平行，图像采集的尺寸为$1382 \times 512$像素。所有传感器的整体布局如\figurename \ref{fig:KITTI}。
+
+\input{figures/chap04_kitti_car.tex}
+
+KITTI数据集根据不同的任务分为stero、flow、scenceflow、depth、odometry、object以及tracking等部分，对应着场景流估计、深度估计、路径规划、物体检测以及目标追踪等任务。每一个任务数据包都包含了海量的训练数据以及测试数据，供研究者使用。本项目主要使用了KITTI数据集的tracking数据包，该数据包由21段训练视频流（共8004帧数据）以及29段测试视频流（共11095帧数据）组成。每一段视频流都是由连续的RGB图像帧以及三维点云帧组成，在训练数据集中，还包含了每一帧数据对应的二维目标框（针对图像数据）以及三维目标框（针对点云数据）。此外，针对每一段视频流，KITTI还提供了传感器的标定信息以及每一帧的GPS/IMU数据，供研究者数据标定时使用。
+
+多目标追踪的标签共有10项，记录了帧的信息以及帧中每个目标的信息。信息列举如下：
+\begin{itemize}
+	\item frame id：帧的编号；
+	\item object id：每一帧中目标的编号，也是轨迹的编号；
+	\item type：目标的类别，有”Car“，”Van“， "Trunk"，”Pedestrian“，”Cyclist“等类别，本实验将”Car“和”Van“合并为”Car“类，并只针对”Car“类进行检测和追踪；
+	\item truncated：标记目标是否被图像边界截断，”0“表示不截断，”1“表示截断；
+	\item occluded：标记目标被遮挡的程度，共有0到3四个取值，”0“表示完全可视，”1“表示部分遮挡，”2“表示大部分遮挡，”3“表示完全遮挡；
+	\item alpha：目标的观测角，$\alpha \in [-\pi, \pi]$；
+	\item bbox：物体在图像上的2D边界框，包含左上角，右下角的坐标值；
+	\item dimensions：物体的高、框和长，单位为米；
+	\item location：物体底部中心点在相机坐标系的三维坐标 x，y，z，单位为米；
+	\item ry：物体在相机坐标系沿Y轴的旋转角，$r_y \in [-pi, pi]$。
+\end{itemize}
+其中目标的观测角$\alpha = -[(\pi+r_y) + (\pi+\beta)]$，$r_y$与$\beta$如\figurename \ref{fig:kitti_obj}所示，而目标的location坐标如\figurename \ref{fig:kitti_box3d}所示。
+\input{figures/chap04_kitti_view.tex}
+
+传感器的标定信息保存在”calib.txt“文件中，其中包含了相机的参数矩阵以及各传感器之间的旋转矩阵。信息列举如下：
+\begin{itemize}
+	\item P0-P3：四个相机的内参矩阵 $P \in \mathcal{R}^{3\times 4}$；
+	\item R0\_rect：$\mathcal{R}^{3\times 3}$，将摄像机坐标系转换到图像坐标系的校准矩阵；
+	\item Tr\_velo\_to\_cam：$\mathcal{R}^{3\times 4}$，激光雷达坐标系到摄像机坐标系的旋转矩阵；
+	\item Tr\_imu\_to\_velo：$\mathcal{R}^{3\times 4}$，IMU坐标系到激光雷达坐标系的旋转矩阵。
+\end{itemize}
+
+GPS/IMU数据提供了30项信息，其中包含每一帧中自身车辆的经纬度、海拔、三个欧拉角（roll，yaw以及pitch）、速度、加速度、角速度等信息。本实验主要使用到了经纬度以及欧拉角信息将不同帧之间的信息校准到同一坐标系。欧拉角包含了偏航角（yaw，表示机体轴在水平面上的投影与地轴之间的夹角，右偏为正）、俯仰角（pitch，表示机体轴与地平面之间的夹角，抬头为正） 以及翻滚角（roll，表示机体对称面绕机轴转动的角度，右滚为正），如\figurename \ref{fig:euler}所示。
+\input{figures/chap04_euler.tex}
 
 
 \section{数据预处理}
@@ -19,14 +51,27 @@
 \section{实验结果分析}
 \label{results}
 
-\subsection{消融实验}
+
+\subsection{三维物体检测结果分析}
 \label{ablation_study}
+
+\input{tables/shared_rpn_cmp.tex}
+
+\input{tables/detection_cmp.tex}
+
 
 \subsection{流数据检测结果分析}
 \label{stream_result}
 
+\input{figures/chap04_examples.tex}
+
 \subsection{多目标跟踪实验分析}
 \label{mot_result}
+
+\input{tables/tracking_local_cmp.tex}
+
+\input{tables/tracking_benchmark_cmp.tex}
+
 
 \section{结果展示}
 \label{show}

@@ -33,7 +33,7 @@
 近年来，借助深度学习技术，三维物体检测任务取得了许多令人瞩目的成就。这些进展也带动着众多自动驾驶创业公司蓬勃发展。然而，目前大多数三维物体检测方法都是针对单帧数据的，这些方法忽略了数据的时间连续性，无法利用帧与帧之间的相关信息，对技术的落地增加了不少难度。本工作旨在探索三维物体检测中时序信息的利用，通过深度学习技术去挖掘流数据中帧间相关性。为此，本文针对性地构建了一个基于关键帧的双路三维物体检测网络。该网络首先对关键帧进行物体检测，然后基于网络学习的时序信息，将关键帧的检测结果传播到非关键帧。该传播过程可以将不同帧的相同物体关联，因此在得到检测结果之后，追踪结果也很容易获得，从而使得本方法同时具备三维物体检测与追踪的能力。实验表明，本方法在速度与精度上都要优于同类型的单帧物体检测网络。另外，在KITTI数据集的目标追踪比赛中，本方法在MOTA和MOTP两个目标追踪的主要评估指标上分别取得了76.68\%以及81.65\%的成绩。 
 }
 
-\ckeywords{三维物体检测；多目标追踪；时序信息；关键帧；KITTI}
+\ckeywords{三维物体检测；多目标追踪；时序信息；关键帧}
 
 \eabstract{
 Recent approaches for 3D object detection have made tremendous progresses due to the development of deep learning. However, previous researches for detection are mostly based on individual frames, leading to limited exploitation of information between frames. In this paper, we attempt to leverage the temporal information in streaming data and explore 3D streaming based object detection as well as tracking. Toward
@@ -41,7 +41,7 @@ this goal, we set up a dual-way network for 3D object detection based on key fra
 76.68\% in MOTA and 81.65\% in MOTP respectively.
 }
 
-\ekeywords{3D object detection; Multiple object tracking; Temporal information; Key frame; KITTI}
+\ekeywords{3D object detection; Multiple object tracking; Temporal information; Key frame}
 
 \makecover
 
