@@ -37,19 +37,64 @@ KITTI数据集根据不同的任务分为stero、flow、scenceflow、depth、odo
 \end{itemize}
 
 GPS/IMU数据提供了30项信息，其中包含每一帧中自身车辆的经纬度、海拔、三个欧拉角（roll，yaw以及pitch）、速度、加速度、角速度等信息。本实验主要使用到了经纬度以及欧拉角信息将不同帧之间的信息校准到同一坐标系。欧拉角包含了偏航角（yaw，表示机体轴在水平面上的投影与地轴之间的夹角，右偏为正）、俯仰角（pitch，表示机体轴与地平面之间的夹角，抬头为正） 以及翻滚角（roll，表示机体对称面绕机轴转动的角度，右滚为正），如\figurename \ref{fig:euler}所示。
+
 \input{figures/chap04_euler.tex}
 
 
 \section{数据预处理}
 \label{preprocessing}
+DODT框架融合了点云数据信息以及RGB图像数据信息，由于激光雷达的视野和摄像机的视野不同，因此在融合之前需要将激光雷达坐标系下的点云转换到图像坐标系中。假设激光雷达坐标系下点云的齐次坐标为$P_{pc}=[X,Y,Z,1]^T$，其中$X=(x_1,x_2,...,x_n),Y=(y_1,y_2,...,y_n),Z=(z_1,z_2,...,z_n)$，表示点云中所有$n$个点的坐标向量。点云中所有点对应到图像坐标系上的像素点齐次坐标为$P_{img} = [U,V,1]^T$（U，V同样为坐标向量），则转换关系如公式\ref{con:transform}所示。其中$P_{cam}$为相机的参数矩阵，R0\_rect 以及 Tr\_velo\_to\_cam为上一小节校准文件中的转换矩阵。
+\begin{equation}
+P_{img} = P_{cam} * R0\_rect * Tr\_velo\_to\_cam * P_{pc}
+\label{con:transform}
+\end{equation}
+经过这步转换后，点云与图像都在相同坐标系下。之后我们对点云的预处理方式和AVOD\cite{ku2018joint}一样，首先将落在图像尺寸之外的点过滤掉，然后分别沿X，Z，Y轴截取$[-40,40] \times [0,70] \times [0,2.5]$米的区域作为最终的点云数据。
 
+为了让DODT输入的两帧关键帧数据能够很好的融合从而得到时序信息，我们还需要将两帧数据校准到同一坐标系，该过程需要用到上文提及的GPS/IMU数据。假设DODT输入的相邻关键帧为$F_1$和$F_2$，$F_1$对应时刻车体的经纬度为 $(lat_1, lon_1)$，欧拉角pitch、roll、yaw 为 $(p_1,r_1,y_1)$，$F_2$ 对应时刻车体的经纬度为 $(lat_2, lon_2)$，欧拉角pitch、roll、yaw为 $(p_2,r_2,y_2)$。则$F_1$和$F_2$坐标系原点的球面距离计算公式如\ref{con:sphere_dis}所示，其中$R=6378137.0$米，为地球的半径。
+\begin{equation}
+d = 2R * \arcsin(\sqrt{\sin^2(\frac{lat_2 - lat_1}{2}) + \cos(lon_1)\cos(lon_2)\sin^2(\frac{lon_2 - lon_1}{2})})
+\label{con:sphere_dis}
+\end{equation}
+为了将$F_2$的点云数据转换到$F_1$坐标系下，需要求得两坐标系的位移$\Delta$以及旋转矩阵$\mathcal{M}$。根据计算的两坐标原点的球面距离以及各自的欧拉角，位移$\Delta$计算如公式\ref{con:origin_offset}所示，旋转矩阵$\mathcal{M} = R_Z * R_X * R_Y$，计算如公式\ref{con:rotate_matrix}所示，其中$\delta_p = (p_2 - p_1)$，$\delta_r = (r_2 - r_1)$，$\delta_y = (y_2 - y_1)$，为两帧车体欧拉角的偏差。 假设$F_2$中所有点云的原始坐标矩阵为$P_{origin} = [X,Y,Z]^T \in \mathbb{R}^{ n \times 3}$，则其转换到$F_1$坐标系下的坐标矩阵$P_{trans} = (P_{origin} + \Delta) * \mathcal{M}$。坐标系转换前后两帧点云数据叠加可视化对比如下图所示，由图可知坐标系转换有利于两帧信息的关联。 
+\begin{equation}
+\Delta = [\delta_x, \delta_y, \delta_z]^T = [d\cos(y_2-y_1), d\sin(y_2-y_1),d\sin(p_2-p_1)]
+\label{con:origin_offset}
+\end{equation}
+\begin{equation}
+\mathcal{M} = \\
+	\begin{bmatrix} 
+		\cos(\delta_p) & 0 & \sin(\delta_p)\\
+		0 & 1 & 0 \\
+		-\sin(\delta_p) & 0 & \cos(\delta_p)
+	\end{bmatrix}
+	\begin{bmatrix} 
+	1 & 0 & 0\\
+	0 & \cos(\delta_r) & -sin(\delta_r) \\
+	0 & sin(\delta_r) & \cos(\delta_r)
+	\end{bmatrix}
+	\begin{bmatrix} 
+	\cos(\delta_y) & -\sin(\delta_y) & 0\\
+	\sin(\delta_y) & \cos(\delta_y) & 0 \\
+	0 & 0 & 1
+	\end{bmatrix}
+\label{con:rotate_matrix}
+\end{equation}
+
+在数据可视化时，我们注意到KITTI官方提供的多目标追踪标签并不完备。例如，在图\ref{fig:examples}第一行中，我们可视化了训练数据集第0段视频的几帧数据以及官方提供的标签，可以看到有些目标（由红色虚线框圈出）在128帧中有标签，但是在118以及120帧中却没有标签，尽管这些目标在118帧以及120帧中都能很好识别。这种情况在整个训练数据集中都经常出现，因此，为了更好的衡量DODT模型的检测与追踪性能，我们手动添加了这些漏打的标签。
 
 \section{模型训练}
 \label{training}
+我们的实验在一台配置有Telsa P100 的GPU以及Intel(R) Xeon(R) E5-2667 v4 @ 3.20GHz的32核CPU的服务器上进行。为了训练并验证DODT的性能，我们将KITTI提供的21段训练视频流分成两份，视频编号为奇数为训练集，偶数的为验证集。我们将官方标记的”Car“以及”Van“目标都当做”Car“，只做该类别的检测与追踪。网络训练过程中的大部分超参数设置我们都借鉴了AVOD\cite{ku2018joint}。具体而言，DODT在训练数据集中迭代次数为120K，批处理大小为1。DODT使用ADAM\cite{kingma2014adam}作为优化器，并且使用了初始值为0.0001，每迭代30K步以0.8的因子指数下降的可变学习率。网络的损失值由四部分组成，目标检测的分类和回归损失以及时序信息模块的分类与回归损失，如公式\ref{con:total_loss}所示。其中训练时权重$w_{cls}, w_{reg}, w_{co}, w_{corr}$的值分别为1.0，5.0，1.0，1.0。RPN的参数设置以及NMS算法的阈值设置在第三章方法部分有详细介绍，这里不再赘述。
+\begin{equation}
+L_{total} = w_{cls}L_{cls} + w_{reg}L_{reg} + w_{co}L_{co} + w_{corr}L_{corr}
+\label{con:total_loss}
+\end{equation}
 
+\input{figures/chap04_examples.tex}
 
 \section{实验结果分析}
 \label{results}
+
 
 
 \subsection{三维物体检测结果分析}
@@ -63,7 +108,6 @@ GPS/IMU数据提供了30项信息，其中包含每一帧中自身车辆的经�
 \subsection{流数据检测结果分析}
 \label{stream_result}
 
-\input{figures/chap04_examples.tex}
 
 \subsection{多目标跟踪实验分析}
 \label{mot_result}
