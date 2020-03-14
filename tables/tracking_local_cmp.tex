@@ -1,17 +1,18 @@
 \begin{table}
 	\centering
 	\wuhao
+	\caption{DODT的不同设置在KITTI多目标追踪验证数据集上的结果。S 表示\textit{Shared RPN}模块， T 表示时序信息处理模块, M 表示运动插值模块。 $\tau$ 是关键帧选取时间步长。}
+	\vspace{0.3cm}
 	\resizebox{\textwidth}{!}{
 		\begin{tabular}{cccccccc}
-			\toprule[1pt]
+			\toprule[1.5pt]
 			方法   & 模块 & MOTA(\%)$\uparrow$ & MOTP(\%)$\uparrow$ & MT(\%)$\uparrow$ & ML(\%)$\downarrow$ & IDS$\downarrow$&  FM$\downarrow$ \\ \midrule
 			AVOD\cite{ku2018joint}    & -      & 66.05    & 82.97    & 46.22  & 12.18  & \textbf{2}      &  113  \\
-			DODT($\tau$ = 3)          & -      & 76.53    & \textbf{83.93}    & 68.91  & 7.14   & 32      &  80  \\
-			DODT($\tau$ = 3)          & T      & 77.52    & 83.75    & 69.33  & 7.56   & 37     &  77  \\
-			DODT($\tau$ = 3)          & M      & 78.73    & \textbf{83.93}    & 68.49  & 9.55   & \textbf{2}      &  \textbf{48}  \\
-			DODT($\tau$ = 3)  & T+M    & \textbf{79.72}   & 83.55    & \textbf{71.85}  & \textbf{5.46}  & 7  &  66  \\ 
-			\bottomrule[1pt]
+			DODT($\tau$ = 3)          & S      & 76.53    & \textbf{83.93}    & 68.91  & 7.14   & 32      &  80  \\
+			DODT($\tau$ = 3)          & S+T      & 77.52    & 83.75    & 69.33  & 7.56   & 37     &  77  \\
+			DODT($\tau$ = 3)          & S+M      & 78.73    & \textbf{83.93}    & 68.49  & 9.55   & \textbf{2}      &  \textbf{48}  \\
+			DODT($\tau$ = 3)  & S+T+M    & \textbf{79.72}   & 83.55    & \textbf{71.85}  & \textbf{5.46}  & 7  &  66  \\ 
+			\bottomrule[1.5pt]
 	\end{tabular}}
-	\caption{DODT的不同设置在KITTI多目标追踪验证数据集上的结果。T 是时序信息处理模块, M 是运动插值模块。 $\tau$ 是关键帧选取时间步长。}
-	\label{label:result_tracking}
+	\label{table:result_tracking}
 \end{table}
