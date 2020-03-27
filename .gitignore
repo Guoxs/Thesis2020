@@ -13,3 +13,5 @@
 
 # ignore Slide generated files
 presentation/*.bib
+
+old-thesis/
