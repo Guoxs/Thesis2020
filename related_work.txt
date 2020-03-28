@@ -1,0 +1,80 @@
+三维物体检测 
+
+单目：由射影几何学，仅仅依赖一副图像是无法准确恢复物体的三维位置，即使能得到相对位置信息，也无法获得真实尺寸。因此，正确检测目标的3D位置最少需要多个相机或者运动相机组成的立体视觉系统，或者由深度相机、雷达等传感器得到的3D点云数据。
+对于特定类型目标，基于机器学习的方法使得通过单目相机进行物体3D检测成为可能。原因是特定类型目标往往具有很强的先验信息，因此依靠给真实物体做标注，联合学习物体类别和物体姿态可以大概估计出物体3D尺寸。不过，为了更好的估计物体的3D位置，更好的方法是结合学习的方法充分融合射影几何知识，来计算物体在真实世界中的尺度和位置。
+
+1. 3d bounding box estimation using deep learning and geometry
+利用深度学习对图像进行二维物体检测得到2D预测框，然后通过对车辆的3D姿态和位置进行建模，估计车辆在场景中的位置以及车辆相对于摄像机的角度，目标的尺寸通过回归学习得到。
+
+2. GS3D: An Efficient 3D Object Detection Framework for Autonomous Driving, CVPR 2019.
+先使用图像进行二维物体检测得到2D边框和方向角，然后通过场景先验计算粗糙的3D边界框，再将3D框重投影到图像平面计算表面特征，最后通过子网络对重投影特征进行分类学习，得到更加精确的3D检测框。
+
+3. Mono3d
+分成两步，利用物体与地平面接触的约束条件，提出一种能量最小化的方法提取3D候选框，然后将其投影到图像平面，并利用若干手工设计的特征对候选区域进行描述，然后利用SSV进行初步的框回归，最后利用CNN得到更加精确地回归结果。
+
+4.AM3D: Accurate Monocular 3D Object Detection via Color-Embedded 3D Reconstruction for Autonomous Driving
+首先利用现有的2D检测和单目深度估计模型对图像进行处理，得到2D Box和深度图像；然后根据相机参数将深度图像转换为三维点云，同时利用2D Box对点云中的目标区域进行前景分割；最后嵌入有效的RGB信息并使用PointNet回归3D Box.
+
+
+双目：对于双目立体视觉，进行合理的双目匹配，通过相机之间的相对位置计算，可以得到比单目视觉更强的空间约束关系，因此结合已有的物体先验知识，可能得到比单目相机更准确的检测结果。
+
+1. 3DOP
+对于两副成对的双目立体视觉图像，首先采用Yamaguchi的方法[1]计算每个点的深度图像，生成点云数据，然后采用Struct-SVM优化方法提取3D候选框；最后采用Fast-RCNN类似框架对3D候选框进行判别和回归，得到最终的预测框。
+[1]K. Yamaguchi, D. McAllester, and R. Urtasun, “Efficient joint segmentation, occlusion labeling, stereo and flow estimation,” in Proc. Eur. Conf. Comput. Vis., 2014, pp. 756–771.
+
+2. Stereo R-CNN based 3D Object Detection for Autonomous Driving. CVPR 2019.
+将Faster-RCNN网络架构扩展到双目立体视觉，使用两个相同的Faster-RCNN(分别输入左右图像)中的RPN结构(stereo-RPN)计算左右视图中匹配的候选框。关键是左右图像的自动对其学习，以及通过稠密匹配优化最终的检测结果。
+
+3. Pseudo-LiDAR: "Pseudo-LiDAR from Visual Depth Estimation: Bridging the Gap in 3D Object Detection for Autonomous Driving".
+利用DRON[1]或PSMNET[2]从单目或者双目图像获取对应的深度图像，然后将原图像结合深度信息得到伪雷达点云，之后利用基于点云的检测方法进行三维物体检测。
+[1]Deep Ordinal Regression Network for Monocular Depth Estimation
+[2]Pyramid Stereo Matching Network
+
+
+点云
+1) 直接在点云上使用3D CNN进行物体检测，简单暴力，比如3D FCN和Vote3Deep。由于点云非常稀疏并且3D CNN需要在三个维度上操作，整个检测、定位的过程极其耗时。此外，受到感受野的影响，传统的3D CNN并不能很好的学习不同尺度的局部特征；
+(2) 针对点云提出的特定网络结构。比如将点云划分成Voxel等结构单元，然后在非空的结构单元上利用网络提取特征(VoxelNet)。还有一些其他新奇高效的模型：PointNet, PointNet++, PointCNN, PointSIFT, Octnet, Dynamic Graph CNN等，这些模型主要关注的是如何从点云中学习到更有效的空间几何表示，这些模型会在后续文章中一一介绍；
+(3) 将点云映射到某一个平面，比如前视图或鸟瞰图，这也是这篇论文选取的方案。虽然这一映射过程存在某一维度的信息损失，但是针对无人驾驶这一场景而言，几乎所有的物体都是位于同一个平面上.这种处理方式能够保持空间的深度信息和物体的几何形状，同时能够轻易地解决遮挡问题，更关键的是将3D CNN简化为2D CNN，大大降低了时间和空间复杂度，使得实时性检测成为可能。并行以及后续相关的工作都是采用这一方式实现3D Real-time Detection，比如与PIXOR来自同一课题组的FaF，还有来自Ilmenau University of Technology的Complex-YOLO。
+
+
+1. VoxelNet
+将三维点云划分为一定数量的Voxel，经过点的随机采样以及归一化后，对每一个非空Voxel使用若干个VFE(Voxel Feature Encoding)层进行局部特征提取，得到Voxel-wise Feature，然后经过3D Convolutional Middle Layers进一步抽象特征（增大感受野并学习几何空间表示），最后使用RPN(Region Proposal Network)对物体进行分类检测与位置回归。
+
+2. PIXOR: One-stage 3D Detector
+通过点云得到以高度和反射率为channel的2D BEV(Bird's Eye View) map，然后使用结构微调的RetinaNet进行物体检测与定位。
+
+3.LMNet 目前最快的3D检测网络。
+输入点云投影得到的前视图FV(Front View)，使用带有扩张/空洞卷积(Dilated Convolution)的FCN(Fully Convolutional Networks)结构进行one-stage物体检测。是VeloFCN的加速版。
+
+4. BirdNet
+将输入点云投影得到3-channel BEV map，channel依次为高度、强度和密度，其中密度进行归一化预处理，然后使用Faster R-CNN在BEV上进行2D Object Oriented Detection，最后结合检测结果和Ground estimation，离线进行3D Object Oriented Detection。
+
+5.RT3D: 三维物体检测速度与精度折中的新探索
+BEV(Bird's Eye View) + R-FCN
+
+
+
+图像+点云
+同时基于图像和点云的方案，具有代表性的工作有MV3D, Fusing BEV&FV, AVOD, F-PointNet等。
+
+1.AVOD
+输入RGB图像以及BEV(Bird's Eye View) Map，利用FPN网络得到二者全分辨率的feature map，然后通过crop&resize提取两个feature map对应的feature crop并融合，最后挑选出3D proposal以实现3D物体检测。整个过程是two-stage detection，可以理解为MV3D的加强版
+
+2. F-PC_CNN
+首先在RGB图像上进行2D Detection，得到车辆的2D bounding box，然后投影到点云中相应位置区域，并利用RANSAC算法生成3D box proposals。接着，使用车辆3D CAD模型对3D box proposals进行筛选（类似模板匹配的过程）。最后，通过一个two-stage 2D CNN进一步finetune 3D bounding box并分类。
+
+3. F-PointNet: 以二维图像驱动三维点云中的物体检测
+输入RGB-D data，先通过Mask R-CNN在RGB图像上找到2D region proposal，结合该区域的depth后得到frustum proposal，接着，在该frustum中使用PointNet++进行3D instance segmentation（进一步缩小proposal的三维空间），最后，利用T-Net对坐标归一，并再次使用PointNet++，回归出物体3D Bouding Box的相关参数
+
+4.PointFusion: 无损空间信息与RGB信息完美融合
+输入RGB image crop和与之相对应的raw 3D point cloud，分别通过ResNet和PointNet提取特征，然后对两类特征进行fusion并进一步抽象，最后将3D points视为spatial anchors并进行dense prediction以得到物体的3D bounding box。
+
+5. ContFuse: 多尺度多传感器深度融合的3D物体检测
+首先分别在图像流和点云流(BEV)使用ResNet18提取特征，然后将图像特征进行多尺度融合并利用PCCN将其“投影”到BEV map上(类似于插值过程)，融合了图像特征以及空间位置信息，最后与点云流特征进一步融合并实现3D检测。
+与MV3D, AVOD, PointFusion等相同，ContFuse采取的也是图像和点云数据融合的方式进行3D检测。值得一提的是，ContFuse将image feature由前视图(FV)转换到俯视图(BEV), 然后再与点云数据对应的BEV feature进行continuous fusion, 这与之前大部分的融合方式是不同的。
+
+
+
+
+
+
