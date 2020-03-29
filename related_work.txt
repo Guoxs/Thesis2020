@@ -28,8 +28,7 @@
 3. Pseudo-LiDAR: "Pseudo-LiDAR from Visual Depth Estimation: Bridging the Gap in 3D Object Detection for Autonomous Driving".
 利用DRON[1]或PSMNET[2]从单目或者双目图像获取对应的深度图像，然后将原图像结合深度信息得到伪雷达点云，之后利用基于点云的检测方法进行三维物体检测。
 [1]Deep Ordinal Regression Network for Monocular Depth Estimation
-[2]Pyramid Stereo Matching Network
-
+[2]Pyramid Stereo Matching Network.
 
 点云
 1) 直接在点云上使用3D CNN进行物体检测，简单暴力，比如3D FCN和Vote3Deep。由于点云非常稀疏并且3D CNN需要在三个维度上操作，整个检测、定位的过程极其耗时。此外，受到感受野的影响，传统的3D CNN并不能很好的学习不同尺度的局部特征；
