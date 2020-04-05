@@ -1,6 +1,6 @@
 \begin{figure}[t]
 	\centering
 	\includegraphics[trim={4cm, 0cm, 7cm, 0cm}, clip,width=0.8\textwidth]{./imgs/roi.pdf}
-	\caption{RoI层将不同尺寸的特征图转换为密集特征向量，然后输入全连接层。图中为多尺度RoI池化操作，Fast-RCNN原工作使用的是单尺度，譬如只有4x4的池化操作。}
+	\caption{RoI层将不同尺寸的特征图转换为相同尺寸的密集特征向量，然后输入全连接层。图中为多尺度RoI池化操作，Fast-RCNN使用的是单尺度，只有一个7x7的RoI池化操作。}
 	\label{fig:roi}
 \end{figure}
