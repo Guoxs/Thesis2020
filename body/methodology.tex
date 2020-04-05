@@ -59,7 +59,7 @@ DODT检测模块有两个单独的特征提取网络，分别用于图像特征�
 \section{Shared RPN模块}
 \label{shared_rpn}
 
-\input{figures/chap03_rpn.tex}
+\input{figures/chap03_shared_rpn.tex}
 
 DODT 的 \textit{Shared RPN} 模块是以 AVOD 的 RPN 为基础改造的，其结构如\figurename \ref{fig:shared_rpn}所示。DODT有两个检测分支，正常来说需要两个单独的RPN网络生成各自的候选框。但由于DODT处理的是流数据，两分支的关键帧输入有很大的关联性，因为关键帧的特征变化在时间维度上是连续的。受此启发，我们将两分支的RPN合并成一个\textit{Shared RPN}，该RPN能够生成供两分支同时使用的3D候选框。和检测模块一样，\textit{Shared RPN}也融合了点云特征与图像特征来预测3D候选框。图像数据的处理和检测模块一样，由于相邻关键帧中图像数据的变化微乎其微，因此我们只使用前一帧关键帧图像数据提取RGB特征，特征提取过程和检测模块一样（可以直接使用检测模块处理好的图像特征）。对于点云特征提取，\textit{Shared RPN}不像检测模块一样只使用一帧点云数据，而是联合了两关键帧以及关键帧之间的点云数据。这是因为点云数据是稀疏的，单帧点云数据不能很好的捕获物体在三维空间的位姿信息，特别是对于远处的物体。但如果将连续时间片段的点云数据联合起来，这在一定层度上是能够增强物体特征的。考虑到在实际驾驶场景中LIDAR本身也在不停地运动，造成每帧点云的参考系不一样，直接叠加点云数据效果必然很糟糕，因此需要把这些点云数据校准到同一坐标系上。点云的校准需要用到LIDAR在不同时刻的位姿信息，这些可以在IMU数据中得到。将连续时间片段的点云数据校准到同一坐标系后，使用和检测分支一样的方式构建BEV特征图，然后用相同的特征提取网络提取点云特征。由于点云的稀疏性以及使用体素化的点云编码方法，点云数据的联合并不会带来额外的计算负担，但却可以有效的增强点云特征。
 
@@ -97,7 +97,10 @@ C^{t,t+\tau}(j,k,p,q) = \left \langle f^t_i(j,k), f^{t+\tau}_i(j+p,k+q) \right \
 
 \section{运动插值模块}
 \label{interpolation}
-运动插值模块的任务主要是将两目标检测模块的输出与时序信息处理模块的输出整合，在时序信息的引导下，将关键帧的物体检测结果传播到非关键帧。运动插值模块主要由一个基于运动模型的插值算法（Motion based Interpolation Algorithm，MoI）组成，其流程如算法 \ref{alg:interpolation} 所示。MoI算法的输入为第$t$帧以及$t+\tau$帧的三维物体检测结果$D^t$和$D^{t+\tau}$，以及这两帧中各物体的相对偏移$\Delta^{t,t+\tau}$。输出为$t$到$t+\tau$帧的所有目标检测结果。当$t$帧与$t+\tau$帧检测的目标个数相同时，$D^t，D^{t+\tau}$以及$\Delta^{t,t+\tau}$元素个数相同；当有目标不同时存在于$t$帧与$t+\tau$帧时，$D^t$与$D^{t+\tau}$的元素不相等，而$\Delta^{t,t+\tau}$元素个数为$D^t$与$D^{t+\tau}$的最大值，只是不同时存在前后两帧赶关键帧的目标偏移量为0。
+
+\input{figures/timeline_interpolation.tex}
+
+运动插值模块的任务主要是将两目标检测模块的输出与时序信息处理模块的输出整合，在时序信息的引导下，将关键帧的物体检测结果传播到非关键帧，如图\ref{fig:timeline_interpolation}所示。运动插值模块主要由一个基于运动模型的插值算法（Motion based Interpolation Algorithm，MoI）组成，其流程如算法 \ref{alg:interpolation} 所示。MoI算法的输入为第$t$帧以及$t+\tau$帧的三维物体检测结果$D^t$和$D^{t+\tau}$，以及这两帧中各物体的相对偏移$\Delta^{t,t+\tau}$。输出为$t$到$t+\tau$帧的所有目标检测结果。当$t$帧与$t+\tau$帧检测的目标个数相同时，$D^t，D^{t+\tau}$以及$\Delta^{t,t+\tau}$元素个数相同；当有目标不同时存在于$t$帧与$t+\tau$帧时，$D^t$与$D^{t+\tau}$的元素不相等，而$\Delta^{t,t+\tau}$元素个数为$D^t$与$D^{t+\tau}$的最大值，只是不同时存在前后两帧赶关键帧的目标偏移量为0。
 
 \begin{algorithm}[!h]
 	\caption{基于运动模型的插值算法(MoI Algorithm)}
