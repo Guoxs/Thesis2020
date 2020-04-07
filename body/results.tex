@@ -1,0 +1,28 @@
+% !Mode:: "TeX:UTF-8"
+
+\chapter{结果展示}
+\label{ch:results}
+
+本章将选择DODT在KITTI追踪数据集上的一些结果进行展示，以便读者能够更好的了解DODT的性能。
+
+\section{验证集结果展示}
+\label{val_results}
+本小节我们将可视化AVOD模型、Based\_DODT模型、DODT（T=1） 模型以及DODT（T=3） 模型在KITTI追踪验证数据集上的运行结果。我们将在同一个场景下绘制 AVOD与DODT（T=3） 、DODT（T=1）与DODT（T=3） 以及Based\_DODT 与 DODT（T=3）  这三对模型的对比结果，最好彩色打印查看。
+
+\section{测试集结果展示}
+\label{test_results}
+
+本小节我们选择了KITTI追踪测试数据集中四段视频的连续四帧进行可视化，有BEV视角，3D视角以及图像视角。相同颜色表示同一辆车在不同时间的状态，最好彩色打印查看。
+
+\input{figures/chap04_viz_results.tex}
+
+% 打印时插入必要的空白页
+\ifprint
+	\newpage
+	\thispagestyle{empty}
+	\mbox{}
+	
+	% 避免空白页影响页码编号
+	\clearpage
+	\setcounter{page}{10}
+\fi
