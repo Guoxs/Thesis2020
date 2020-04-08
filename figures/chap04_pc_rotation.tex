@@ -1,14 +1,14 @@
 \begin{figure}[t]
 	\begin{center}
-		\begin{overpic}[width=\textwidth]{imgs/pc_before_rotation.png}
+		\begin{overpic}[width=0.98\textwidth]{imgs/pc_before_rotation.png}
 			\put(5, 5){\color{white}{校准前}}
 		\end{overpic}\vspace{4pt}
-		\begin{overpic}[width=\textwidth]{imgs/pc_after_rotation.png}
+		\begin{overpic}[width=0.98\textwidth]{imgs/pc_after_rotation.png}
 			\put(5, 5){\color{white}{校准后}}
 		\end{overpic}
 	\end{center}
 	\vspace{-0.8cm}
-	\caption{两帧相邻关键帧点云数据校准到同一个坐标系。其中白色框为前一帧关键帧标签，绿色框为后一帧关键帧标签，框上的数字为框标号。可以看出，校准前两帧点云中的同一物体偏离很大，无法有效融合两帧数据；而校准后两帧中同一物体基本重合在一起，些许偏移为物体运动造成的。校准后的数学可以有效融合，也更容易提取时序特征。}
+	\caption{两帧相邻关键帧$F_1$和$F_2$的点云数据校准到同一个坐标系下。其中白色框为关键帧$F_1$的标签框，绿色框为关键帧$F_2$的标签框，框上的数字为框标号。可以看出，校准前两帧点云中相同物体的标签框偏离很大，无法有效融合两帧数据；而校准后两帧中同一物体的标签框基本重合在一起，些许偏移为物体运动造成的。由图可知校准后的数据可以更有效融合，也更利于提取时序特征。}
 	\label{fig:pc_rotation}
 \end{figure}
 
