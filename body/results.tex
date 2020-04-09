@@ -7,14 +7,17 @@
 
 \section{验证集结果展示}
 \label{val_results}
-本小节我们将可视化AVOD模型、Based\_DODT模型、DODT（T=1） 模型以及DODT（T=3） 模型在KITTI追踪验证数据集上的运行结果。我们将在同一个场景下绘制 AVOD与DODT（T=3） 、DODT（T=1）与DODT（T=3） 以及Based\_DODT 与 DODT（T=3）  这三对模型的对比结果，最好彩色打印查看。
+本小节我们可视化了三对模型在KITTI目标追踪验证数据集上的预测结果。这三对模型分别是AVOD与DODT（T=3） 、 DODT（T=1）与DODT（T=3） 以及Based\_DODT 与 DODT（T=3），分别对应了图\ref{fig:avod_dodt}、图\ref{fig:dodt_1_3}以及图\ref{fig:dodt_based}。所有选取的可视化帧都是步长为3的连续关键帧，图中绿色框为KITTI官方提供的标签框，蓝色为我们新添加的标签框。图\ref{fig:avod_dodt}可视化的是第20段视频的第18、21和24帧，可以看出相比于AVOD，DODT（T=3） 对远处目标以及新添加标签的目标预测更好。图\ref{fig:dodt_1_3}可视化的是第18段视频的第150、153和156帧，可以看出大步长有利于轨迹的延伸，从而使得模型对远处物体预测性能更好。图\ref{fig:dodt_based}可视化的是第20段视频的第30、33和36帧，可以看出时序信息以及MoI插值算法有利于保持目标状态的长程联系性。
+
+
+\input{figures/chap05_val_compare.tex}
 
 \section{测试集结果展示}
 \label{test_results}
 
-本小节我们选择了KITTI追踪测试数据集中四段视频的连续四帧进行可视化，有BEV视角，3D视角以及图像视角。相同颜色表示同一辆车在不同时间的状态，最好彩色打印查看。
+本小节我们选择了KITTI目标追踪测试数据集中四段视频的连续四帧进行可视化。图\ref{fig:test_06}可视化的是第6段测试视频的连续四帧，场景为两辆车在公路上行驶；图\ref{fig:test_10}可视化的是第10段测试视频的连续四帧，是十字路口的车辆行驶场景；图\ref{fig:test_11}可视化的是第11段测试视频的连续四帧，场景是繁华的城市闹区；图\ref{fig:test_12}可视化的是第12段测试视频的连续四帧，场景中有较多停靠在路旁的车辆。所有图中每一行左侧为BEV视图，右侧上方为3D视图，右侧下方为图像视图，相同颜色表示同一辆车在不同时间的状态。
 
-\input{figures/chap04_viz_results.tex}
+\input{figures/chap05_viz_results.tex}
 
 % 打印时插入必要的空白页
 \ifprint

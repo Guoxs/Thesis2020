@@ -100,7 +100,7 @@ C^{t,t+\tau}(j,k,p,q) = \left \langle f^t_i(j,k), f^{t+\tau}_i(j+p,k+q) \right \
 \section{运动插值模块}
 \label{interpolation}
 
-\input{figures/timeline_interpolation.tex}
+\input{figures/chap03_timeline_interpolation.tex}
 
 运动插值模块的任务主要是将两目标检测模块的输出与时序信息处理模块的输出整合，在时序信息的引导下，将关键帧的物体检测结果传播到非关键帧，如图\ref{fig:timeline_interpolation}所示。运动插值模块主要由一个基于运动模型的插值算法（Motion based Interpolation Algorithm，MoI）组成，其流程如算法 \ref{alg:interpolation} 所示。MoI算法的输入为第$t$帧以及$t+\tau$帧的三维物体检测结果$D^t$和$D^{t+\tau}$，以及这两帧中各物体的相对偏移$\Delta^{t,t+\tau}$。输出为$t$到$t+\tau$帧的所有目标检测结果。当$t$帧与$t+\tau$帧检测的目标个数相同时，$D^t,D^{t+\tau}$以及$\Delta^{t,t+\tau}$元素个数相同；当有目标不同时存在于$t$帧与$t+\tau$帧时，$D^t$与$D^{t+\tau}$的元素不相等，而$\Delta^{t,t+\tau}$元素个数为$D^t$与$D^{t+\tau}$中元素个数的的最大值，只是不同时存在前后两帧关键帧的目标偏移量为0。
 
